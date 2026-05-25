@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIXEL SURVIVOR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  :root {
+    --nokia-bg: #8bac0f;
+    --nokia-dark: #0f380f;
+    --nokia-mid: #306230;
+    --nokia-light: #9bbc0f;
+    --nokia-black: #0a0a0a;
+    --screen-bg: #9bbc0f;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+
+  body {
+    background: #1a1a2e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Press Start 2P', monospace;
+    overflow: hidden;
+  }
+
+  /* ── DEVICE SHELL ── */
+  .device {
+    position: relative;
+    width: 400px;
+    background: linear-gradient(160deg, #2d2d2d 0%, #1a1a1a 60%, #111 100%);
+    border-radius: 32px 32px 60px 60px;
+    padding: 24px 24px 48px;
+    box-shadow:
+      0 0 0 2px #444,
+      0 0 0 4px #222,
+      0 8px 40px rgba(0,0,0,0.8),
+      inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+
+  /* brand strip */
+  .brand {
+    text-align: center;
+    font-size: 7px;
+    color: #555;
+    letter-spacing: 4px;
+    margin-bottom: 12px;
+  }
+
+  /* ── LCD SCREEN ── */
+  .screen-bezel {
+    background: #111;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: inset 0 2px 8px rgba(0,0,0,0.9), 0 0 0 1px #333;
+  }
+
+  .screen-inner {
+    position: relative;
+    width: 352px;
+    height: 264px;
+    background: var(--screen-bg);
+    border-radius: 4px;
+    overflow: hidden;
+    /* LCD scanline overlay */
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(0,0,0,0.04) 3px,
+      rgba(0,0,0,0.04) 4px
+    );
+  }
+
+  canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 352px;
+    height: 264px;
+    display: block;
+  }
+
+  /* LCD glare */
+  .screen-inner::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg,
+      rgba(255,255,255,0.06) 0%,
+      transparent 50%,
+      rgba(0,0,0,0.04) 100%
+    );
+    pointer-events: none;
+    border-radius: 4px;
+    z-index: 10;
+  }
+
+  /* ── SPEAKER GRILLE ── */
+  .speaker {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
+    margin: 12px 0 8px;
+  }
+  .speaker span {
+    width: 3px;
+    height: 14px;
+    background: #333;
+    border-radius: 2px;
+  }
+
+  /* ── D-PAD ── */
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    gap: 3px;
+    position: relative;
+  }
+
+  .dpad-btn {
+    background: #252525;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-size: 12px;
+    transition: background 0.08s, transform 0.08s;
+    box-shadow: 0 3px 0 #111, 0 0 0 1px #333;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .dpad-btn:active, .dpad-btn.pressed {
+    background: #333;
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #111, 0 0 0 1px #333;
+  }
+  .dpad-center {
+    background: #1e1e1e;
+    border-radius: 50%;
+    box-shadow: none;
+    cursor: default;
+  }
+  .dpad-empty { background: transparent; box-shadow: none; cursor: default; }
+
+  /* ── ACTION BUTTONS ── */
+  .action-row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-top: 12px;
+    padding: 0 16px;
+  }
+
+  .btn-a, .btn-b {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    font-weight: bold;
+    transition: transform 0.08s, box-shadow 0.08s;
+    user-select: none;
+  }
+  .btn-a {
+    background: #8b1a1a;
+    color: #ffaaaa;
+    box-shadow: 0 4px 0 #5a0f0f, 0 0 0 2px #333;
+  }
+  .btn-b {
+    background: #1a5a1a;
+    color: #aaffaa;
+    box-shadow: 0 4px 0 #0f3a0f, 0 0 0 2px #333;
+  }
+  .btn-a:active, .btn-b:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #333, 0 0 0 2px #333;
+  }
+
+  .btn-start {
+    background: #333;
+    color: #777;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 6px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    box-shadow: 0 3px 0 #111;
+    transition: transform 0.08s;
+  }
+  .btn-start:active { transform: translateY(2px); box-shadow: 0 1px 0 #111; }
+
+  /* ── SCORE PANEL (below device) ── */
+  .leaderboard {
+    position: fixed;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 7px;
+    color: #445;
+    min-width: 140px;
+  }
+  .leaderboard h3 {
+    color: #8bac0f;
+    font-size: 8px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #2a2a4a;
+    padding-bottom: 8px;
+  }
+  .lb-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    color: #556;
+  }
+  .lb-row.you { color: #8bac0f; }
+
+  /* wave flash */
+  @keyframes waveFlash {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="device">
+  <div class="brand">N O K I A &nbsp; 3 3 1 0</div>
+
+  <div class="screen-bezel">
+    <div class="screen-inner">
+      <canvas id="c" width="352" height="264"></canvas>
+    </div>
+  </div>
+
+  <div class="speaker">
+    <span></span><span></span><span></span>
+    <span></span><span></span><span></span>
+    <span></span><span></span>
+  </div>
+
+  <!-- D-PAD -->
+  <div class="controls">
+    <div class="dpad-empty"></div>
+    <button class="dpad-btn" id="btn-up" onpointerdown="keySet('up',true)" onpointerup="keySet('up',false)" onpointerleave="keySet('up',false)">▲</button>
+    <div class="dpad-empty"></div>
+
+    <button class="dpad-btn" id="btn-left" onpointerdown="keySet('left',true)" onpointerup="keySet('left',false)" onpointerleave="keySet('left',false)">◀</button>
+    <div class="dpad-btn dpad-center"></div>
+    <button class="dpad-btn" id="btn-right" onpointerdown="keySet('right',true)" onpointerup="keySet('right',false)" onpointerleave="keySet('right',false)">▶</button>
+
+    <div class="dpad-empty"></div>
+    <button class="dpad-btn" id="btn-down" onpointerdown="keySet('down',true)" onpointerup="keySet('down',false)" onpointerleave="keySet('down',false)">▼</button>
+    <div class="dpad-empty"></div>
+  </div>
+
+  <!-- ACTION BUTTONS -->
+  <div class="action-row">
+    <button class="btn-b" onpointerdown="keySet('dash',true)" onpointerup="keySet('dash',false)">B</button>
+    <button class="btn-start" onclick="handleStart()">START</button>
+    <button class="btn-a" onpointerdown="keySet('dash',true)" onpointerup="keySet('dash',false)">A</button>
+  </div>
+</div>
+
+<!-- Leaderboard -->
+<div class="leaderboard" id="lb">
+  <h3>▶ BEST RUNS</h3>
+  <div id="lb-list"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════
+//  PIXEL SURVIVOR — Nokia 3310 Web Game
+//  Pure HTML5 Canvas · No libraries needed
+// ════════════════════════════════════════════════════
+
+const C = document.getElementById('c');
+const ctx = C.getContext('2d');
+const W = 352, H = 264;
+
+// ── Palette (Nokia green LCD) ──────────────────────
+const P = {
+  bg:    '#9bbc0f',   // screen background
+  dark:  '#0f380f',   // darkest (player, text)
+  mid:   '#306230',   // mid (enemies, borders)
+  lite:  '#8bac0f',   // light green
+  black: '#0a1a0a',   // near black
+  flash: '#c8d87a',   // hit flash
+};
+
+// ── Input state ────────────────────────────────────
+const keys = { up:false, down:false, left:false, right:false, dash:false };
+let dashPressed = false;
+
+document.addEventListener('keydown', e => {
+  if(e.key==='ArrowUp'   ||e.key==='w'||e.key==='W') keys.up=true;
+  if(e.key==='ArrowDown' ||e.key==='s'||e.key==='S') keys.down=true;
+  if(e.key==='ArrowLeft' ||e.key==='a'||e.key==='A') keys.left=true;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.right=true;
+  if(e.key===' '||e.key==='x'||e.key==='z') keys.dash=true;
+  if(e.key==='Enter') handleStart();
+  e.preventDefault();
+});
+document.addEventListener('keyup', e => {
+  if(e.key==='ArrowUp'   ||e.key==='w'||e.key==='W') keys.up=false;
+  if(e.key==='ArrowDown' ||e.key==='s'||e.key==='S') keys.down=false;
+  if(e.key==='ArrowLeft' ||e.key==='a'||e.key==='A') keys.left=false;
+  if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') keys.right=false;
+  if(e.key===' '||e.key==='x'||e.key==='z') keys.dash=false;
+});
+function keySet(k,v){ keys[k]=v; }
+
+// ── Particle system ────────────────────────────────
+class Particle {
+  constructor(x,y,dx,dy,life,col,size=2){
+    this.x=x; this.y=y; this.dx=dx; this.dy=dy;
+    this.life=this.maxLife=life; this.col=col; this.size=size;
+  }
+  update(dt){ this.x+=this.dx*dt; this.y+=this.dy*dt; this.life-=dt; }
+  draw(){
+    const a=this.life/this.maxLife;
+    ctx.globalAlpha=a;
+    ctx.fillStyle=this.col;
+    const s=this.size*a;
+    ctx.fillRect(this.x-s/2,this.y-s/2,s,s);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── Game state ─────────────────────────────────────
+let state = 'title'; // 'title' | 'play' | 'over' | 'pause'
+let G; // game object
+
+function newGame(){
+  G = {
+    // Player
+    px: W/2, py: H/2,
+    hp: 5, maxHp: 5,
+    speed: 90,
+    invTimer: 0, // invincibility frames
+    dashTimer: 0,
+    dashCooldown: 0,
+    dashDir: {x:0,y:0},
+    isDashing: false,
+    trail: [], // dash trail positions
+    facing: {x:1,y:0},
+
+    // World
+    enemies: [],
+    items: [],
+    particles: [],
+    score: 0,
+    wave: 1,
+    time: 0,
+
+    // Timers
+    eTimer: 3,
+    iTimer: 6,
+    sTimer: 0,
+    waveTimer: 0,
+    waveAnnounce: 0,
+
+    // Effects
+    screenShake: 0,
+    shakeX: 0, shakeY: 0,
+    bgFlash: 0,
+  };
+  spawnWave(1);
+}
+
+// ── Enemy types ────────────────────────────────────
+// type: 0=chaser, 1=charger, 2=zigzag, 3=splitter
+function makeEnemy(x,y,type,hp,speed){
+  return {
+    x,y, type: type||0,
+    hp: hp||1, maxHp: hp||1,
+    speed: speed||38,
+    vx:0, vy:0,
+    timer:0,
+    zigDir:1,
+    chargeTimer: 0,
+    chargeDir:{x:0,y:0},
+    charging:false,
+    size:6,
+    hitFlash:0,
+  };
+}
+
+function spawnWave(w){
+  const side=()=>{ const s=(Math.random()*4)|0;
+    if(s===0) return {x:Math.random()*W,y:-14};
+    if(s===1) return {x:Math.random()*W,y:H+14};
+    if(s===2) return {x:-14,y:Math.random()*H};
+    return {x:W+14,y:Math.random()*H};
+  };
+  const count = 2 + w*2;
+  for(let i=0;i<count;i++){
+    const p=side();
+    let type=0, hp=1, spd=36+w*3;
+    if(w>=2 && Math.random()<0.3) type=1; // charger
+    if(w>=3 && Math.random()<0.25) type=2; // zigzag
+    if(w>=4 && Math.random()<0.2){ type=3; hp=3; spd*=0.7; } // splitter
+    if(w>=5) hp = Math.ceil(hp * (1 + w*0.15));
+    G.enemies.push(makeEnemy(p.x,p.y,type,hp,spd));
+  }
+}
+
+function spawnItem(x,y){
+  const r=Math.random();
+  // 60% hp, 25% shield, 15% speed boost
+  let type='hp';
+  if(r>0.85) type='speed';
+  else if(r>0.60) type='shield';
+  G.items.push({x: x??20+Math.random()*(W-40), y: y??20+Math.random()*(H-40),
+    type, age:0, bob:Math.random()*Math.PI*2 });
+}
+
+// ── Pixel font renderer (custom 5×5) ──────────────
+// We'll just use ctx.font with our green palette
+function drawText(txt, x, y, size, col, align='left'){
+  ctx.fillStyle = col||P.dark;
+  ctx.font = `${size}px 'Press Start 2P', monospace`;
+  ctx.textAlign = align;
+  ctx.fillText(txt, x, y);
+  ctx.textAlign = 'left';
+}
+
+// ── Pixel rect helpers ─────────────────────────────
+function pxRect(x,y,w,h,col,border){
+  ctx.fillStyle=col;
+  ctx.fillRect(Math.round(x),Math.round(y),w,h);
+  if(border){ ctx.strokeStyle=border; ctx.lineWidth=1; ctx.strokeRect(Math.round(x)+0.5,Math.round(y)+0.5,w-1,h-1); }
+}
+
+// ── HP bar ─────────────────────────────────────────
+function drawHpBar(){
+  const bx=4,by=4,bw=80,bh=7;
+  pxRect(bx,by,bw,bh,P.mid);
+  const fill = (G.hp/G.maxHp)*bw;
+  const col = G.hp>=3?P.dark : G.hp>=2?'#1a4a0a':'#400a0a';
+  pxRect(bx,by,fill,bh,col);
+  // border
+  ctx.strokeStyle=P.dark; ctx.lineWidth=1;
+  ctx.strokeRect(bx+0.5,by+0.5,bw-1,bh-1);
+  drawText('HP',bx+bw+4,by+6,5,P.dark);
+}
+
+// ── Score / wave ───────────────────────────────────
+function drawHUD(){
+  drawHpBar();
+  // Dash cooldown pip
+  const dc = 1-(G.dashCooldown/1.2);
+  pxRect(4,14,Math.round(dc*40),4,P.dark);
+  pxRect(4,14,40,4,P.mid,P.dark);
+  const dc2=Math.round(dc*40);
+  pxRect(4,14,dc2,4,dc>=1?P.dark:P.mid);
+  ctx.strokeStyle=P.dark;ctx.lineWidth=1;ctx.strokeRect(4.5,14.5,39,3);
+  drawText('DASH',46,18,5,P.dark);
+
+  // Score top right
+  const s=String(G.score).padStart(6,'0');
+  drawText(s, W-4, 10, 6, P.dark, 'right');
+  drawText('SCORE', W-4, 18, 4, P.mid, 'right');
+
+  // Wave bottom left
+  drawText('WAVE '+G.wave, 4, H-6, 5, P.mid);
+
+  // Time bottom right
+  const m=Math.floor(G.time/60), sec=Math.floor(G.time%60);
+  drawText((m<10?'0':'')+m+':'+(sec<10?'0':'')+sec, W-4, H-6, 5, P.mid,'right');
+}
+
+// ── Draw player ────────────────────────────────────
+function drawPlayer(){
+  // dash trail
+  for(let i=0;i<G.trail.length;i++){
+    const t=G.trail[i];
+    const a=(i/G.trail.length)*0.4;
+    ctx.globalAlpha=a;
+    ctx.fillStyle=P.lite;
+    ctx.fillRect(Math.round(t.x-3),Math.round(t.y-3),6,6);
+    ctx.globalAlpha=1;
+  }
+
+  // invincibility blink
+  if(G.invTimer>0 && Math.floor(G.invTimer*10)%2===0) return;
+
+  const px=Math.round(G.px), py=Math.round(G.py);
+
+  // body (10×10)
+  pxRect(px-5,py-5,10,10,G.isDashing?P.lite:P.dark);
+  // face detail
+  if(!G.isDashing){
+    pxRect(px-2,py-3,2,2,P.bg); // left eye
+    pxRect(px+1,py-3,2,2,P.bg); // right eye
+    pxRect(px-2,py+1,5,1,P.bg); // mouth
+  }
+  // hat (Nokia style)
+  pxRect(px-4,py-7,9,3,P.dark);
+  pxRect(px-3,py-9,7,3,P.dark);
+}
+
+// ── Draw enemies ────────────────────────────────────
+function drawEnemy(e){
+  const ex=Math.round(e.x), ey=Math.round(e.y);
+  const col = e.hitFlash>0 ? P.flash : P.mid;
+  const dcol = e.hitFlash>0 ? P.lite : P.dark;
+
+  if(e.type===0){ // Chaser — square body
+    pxRect(ex-e.size,ey-e.size,e.size*2,e.size*2,col,dcol);
+    // eyes
+    ctx.fillStyle=dcol;
+    ctx.fillRect(ex-3,ey-3,2,2); ctx.fillRect(ex+1,ey-3,2,2);
+  } else if(e.type===1){ // Charger — diamond
+    ctx.fillStyle=e.charging?P.dark:col;
+    ctx.save(); ctx.translate(ex,ey); ctx.rotate(Math.PI/4);
+    pxRect(-e.size,-e.size,e.size*2,e.size*2,e.charging?P.dark:col,dcol);
+    ctx.restore();
+  } else if(e.type===2){ // Zigzag — triangle-ish
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.moveTo(ex,ey-e.size-2);
+    ctx.lineTo(ex+e.size+2,ey+e.size);
+    ctx.lineTo(ex-e.size-2,ey+e.size);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle=dcol; ctx.lineWidth=1; ctx.stroke();
+  } else if(e.type===3){ // Splitter — big circle
+    ctx.beginPath();
+    ctx.arc(ex,ey,e.size+2,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+    ctx.strokeStyle=dcol; ctx.lineWidth=2; ctx.stroke();
+    // HP pips
+    for(let i=0;i<e.maxHp;i++){
+      const filled=i<e.hp;
+      ctx.fillStyle=filled?dcol:P.bg;
+      ctx.fillRect(ex-e.maxHp*3+i*6,ey+e.size+3,4,4);
+    }
+  }
+}
+
+// ── Draw items ─────────────────────────────────────
+function drawItem(it){
+  const ix=Math.round(it.x), iy=Math.round(it.y+Math.sin(it.bob)*2);
+  if(it.type==='hp'){
+    // heart pixel art
+    ctx.fillStyle=P.dark;
+    [[1,0],[2,0],[4,0],[5,0],[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],
+     [0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],
+     [1,3],[2,3],[3,3],[4,3],[5,3],[2,4],[3,4],[4,4],[3,5]].forEach(([dx,dy])=>{
+      ctx.fillRect(ix-3+dx,iy-3+dy,1,1);
+    });
+  } else if(it.type==='shield'){
+    // diamond shield
+    ctx.fillStyle=P.mid;
+    ctx.beginPath();
+    ctx.moveTo(ix,iy-6); ctx.lineTo(ix+5,iy); ctx.lineTo(ix,iy+6); ctx.lineTo(ix-5,iy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=P.dark; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle=P.dark;
+    ctx.fillRect(ix-1,iy-3,2,6);
+    ctx.fillRect(ix-3,iy-1,6,2);
+  } else { // speed bolt
+    ctx.fillStyle=P.mid;
+    ctx.beginPath();
+    ctx.moveTo(ix+3,iy-6); ctx.lineTo(ix-1,iy); ctx.lineTo(ix+2,iy);
+    ctx.lineTo(ix-3,iy+6); ctx.lineTo(ix+1,iy); ctx.lineTo(ix-2,iy);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle=P.dark; ctx.lineWidth=1; ctx.stroke();
+  }
+}
+
+// ── Screen shake ────────────────────────────────────
+function shake(amount){ G.screenShake=Math.max(G.screenShake,amount); }
+
+// ── Spawn particles ─────────────────────────────────
+function burst(x,y,n,col){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2, spd=20+Math.random()*60;
+    G.particles.push(new Particle(x,y,Math.cos(a)*spd,Math.sin(a)*spd,
+      0.3+Math.random()*0.4, col, 2+Math.random()*3));
+  }
+}
+
+// ── Collision ──────────────────────────────────────
+function dist2(ax,ay,bx,by){ return (ax-bx)**2+(ay-by)**2; }
+
+// ── Main update ────────────────────────────────────
+let lastT = 0;
+function update(ts){
+  const dt = Math.min((ts-lastT)/1000, 0.05);
+  lastT = ts;
+
+  if(state!=='play'){ requestAnimationFrame(update); drawFrame(); return; }
+
+  G.time += dt;
+  G.waveAnnounce = Math.max(0,G.waveAnnounce-dt);
+
+  // ── Player movement ──
+  let dx=0,dy=0;
+  if(keys.up)    dy-=1;
+  if(keys.down)  dy+=1;
+  if(keys.left)  dx-=1;
+  if(keys.right) dx+=1;
+  const len=Math.hypot(dx,dy)||1;
+  if(dx||dy){ G.facing.x=dx/len; G.facing.y=dy/len; }
+
+  // Dash logic
+  G.dashCooldown=Math.max(0,G.dashCooldown-dt);
+  G.dashTimer=Math.max(0,G.dashTimer-dt);
+
+  if(keys.dash && !dashPressed && G.dashCooldown<=0 && (dx||dy)){
+    G.isDashing=true;
+    G.dashTimer=0.18;
+    G.dashDir={x:G.facing.x,y:G.facing.y};
+    G.dashCooldown=1.2;
+    burst(G.px,G.py,8,P.lite);
+  }
+  dashPressed = keys.dash;
+
+  if(G.isDashing){
+    G.trail.push({x:G.px,y:G.py});
+    if(G.trail.length>8) G.trail.shift();
+    G.px += G.dashDir.x*300*dt;
+    G.py += G.dashDir.y*300*dt;
+    if(G.dashTimer<=0) G.isDashing=false;
+  } else {
+    G.trail=[];
+    const effectiveSpeed = G.speedBoost>0 ? G.speed*1.7 : G.speed;
+    G.px += (dx/len||0)*effectiveSpeed*dt;
+    G.py += (dy/len||0)*effectiveSpeed*dt;
+  }
+  if(!G.speedBoost) G.speedBoost=0;
+  G.speedBoost=Math.max(0,(G.speedBoost||0)-dt);
+
+  // Clamp to screen (leave HUD top margin)
+  G.px=Math.max(8,Math.min(W-8,G.px));
+  G.py=Math.max(24,Math.min(H-8,G.py));
+
+  // ── Invincibility ──
+  G.invTimer=Math.max(0,G.invTimer-dt);
+  G.shieldTimer=Math.max(0,(G.shieldTimer||0)-dt);
+
+  // ── Score over time ──
+  G.sTimer+=dt;
+  if(G.sTimer>=1){ G.sTimer=0; G.score+=G.wave*5; }
+
+  // ── Enemy spawn / wave logic ──
+  G.eTimer-=dt;
+  if(G.eTimer<=0 && G.enemies.length===0){
+    G.wave++;
+    G.waveTimer=0;
+    G.waveAnnounce=2.5;
+    spawnWave(G.wave);
+    G.eTimer=G.wave<3?8:5;
+    if(G.wave%3===0) spawnItem(); // bonus item each 3 waves
+    shake(3);
+  } else if(G.eTimer<=0){
+    G.eTimer=0;
+  }
+
+  // ── Item spawn ──
+  G.iTimer-=dt;
+  if(G.iTimer<=0){ G.iTimer=8+Math.random()*4; spawnItem(); }
+
+  // ── Update enemies ──
+  const diff=1+G.wave*0.12;
+  G.enemies.forEach(e=>{
+    e.hitFlash=Math.max(0,e.hitFlash-dt);
+    e.timer+=dt;
+    const d=Math.sqrt(dist2(G.px,G.py,e.x,e.y));
+    const ex=(G.px-e.x)/d, ey=(G.py-e.y)/d;
+
+    if(e.type===0){ // Chaser
+      e.x+=ex*e.speed*diff*dt;
+      e.y+=ey*e.speed*diff*dt;
+    } else if(e.type===1){ // Charger — rushes periodically
+      if(!e.charging){
+        e.x+=ex*e.speed*diff*0.5*dt;
+        e.y+=ey*e.speed*diff*0.5*dt;
+        e.chargeTimer-=dt;
+        if(e.chargeTimer<=0 && d<120){
+          e.charging=true; e.chargeTimer=1.2;
+          e.chargeDir={x:ex,y:ey};
+        }
+      } else {
+        e.x+=e.chargeDir.x*e.speed*diff*2.5*dt;
+        e.y+=e.chargeDir.y*e.speed*diff*2.5*dt;
+        e.chargeTimer-=dt;
+        if(e.chargeTimer<=0){ e.charging=false; e.chargeTimer=2+Math.random(); }
+      }
+    } else if(e.type===2){ // Zigzag
+      const perp={x:-ey,y:ex};
+      const zigAmt=Math.sin(e.timer*4)*80;
+      e.x+=(ex*e.speed+perp.x*zigAmt)*diff*dt;
+      e.y+=(ey*e.speed+perp.y*zigAmt)*diff*dt;
+    } else if(e.type===3){ // Splitter
+      e.x+=ex*e.speed*diff*0.7*dt;
+      e.y+=ey*e.speed*diff*0.7*dt;
+    }
+
+    // ── Player hit ──
+    if(d < e.size+6 && G.invTimer<=0 && !G.isDashing){
+      if((G.shieldTimer||0)>0){
+        // shield absorbs hit
+        G.shieldTimer=0;
+        shake(4); burst(G.px,G.py,12,P.mid);
+      } else {
+        G.hp--; G.invTimer=1.8;
+        G.bgFlash=0.3;
+        shake(5); burst(G.px,G.py,10,P.dark);
+        if(G.hp<=0){ endGame(); return; }
+      }
+    }
+  });
+
+  // ── Dash kills enemies ──
+  if(G.isDashing){
+    G.enemies = G.enemies.filter(e=>{
+      const d=Math.sqrt(dist2(G.px,G.py,e.x,e.y));
+      if(d<e.size+8){
+        e.hp--;
+        e.hitFlash=0.15;
+        burst(e.x,e.y,6,P.lite);
+        shake(2);
+        if(e.hp<=0){
+          onEnemyKill(e);
+          return false;
+        }
+      }
+      return true;
+    });
+  }
+
+  // ── Item pickup ──
+  G.items = G.items.filter(it=>{
+    it.bob+=dt*3; it.age+=dt;
+    if(dist2(G.px,G.py,it.x,it.y)<(14**2)){
+      burst(it.x,it.y,8,P.dark);
+      G.score+=50;
+      if(it.type==='hp') G.hp=Math.min(G.maxHp,G.hp+1);
+      else if(it.type==='shield') G.shieldTimer=5;
+      else if(it.type==='speed') G.speedBoost=4;
+      return false;
+    }
+    return it.age<18; // despawn after 18s
+  });
+
+  // ── Particles ──
+  G.particles = G.particles.filter(p=>{ p.update(dt); return p.life>0; });
+
+  // ── Screen shake ──
+  G.screenShake*=0.85;
+  G.screenShake=Math.max(0,G.screenShake-dt*8);
+  G.shakeX=(Math.random()-0.5)*G.screenShake*4;
+  G.shakeY=(Math.random()-0.5)*G.screenShake*4;
+
+  G.bgFlash=Math.max(0,G.bgFlash-dt*3);
+
+  requestAnimationFrame(update);
+  drawFrame();
+}
+
+function onEnemyKill(e){
+  G.score += (e.type===3?200:e.type===1?100:50) * G.wave;
+  // Splitter spawns 2 smaller enemies
+  if(e.type===3 && e.size>=5){
+    for(let i=0;i<2;i++){
+      const a=Math.random()*Math.PI*2;
+      const ne=makeEnemy(e.x+Math.cos(a)*8, e.y+Math.sin(a)*8, 0, 1, e.speed*1.3);
+      ne.size=4;
+      G.enemies.push(ne);
+    }
+  }
+}
+
+// ── Draw frame ─────────────────────────────────────
+function drawFrame(){
+  ctx.save();
+  ctx.translate(Math.round(G?.shakeX||0), Math.round(G?.shakeY||0));
+
+  // Background
+  const bgCol = G?.bgFlash>0 ?
+    `rgb(${Math.round(180*G.bgFlash+155)},${Math.round(188*(1-G.bgFlash*0.5))},${Math.round(15)})` :
+    P.bg;
+  ctx.fillStyle=bgCol;
+  ctx.fillRect(0,0,W,H);
+
+  // Grid pattern (Nokia dots)
+  ctx.fillStyle='rgba(15,56,15,0.18)';
+  for(let x=8;x<W;x+=8) for(let y=8;y<H;y+=8){
+    ctx.fillRect(x,y,1,1);
+  }
+
+  if(state==='title'){ drawTitle(); ctx.restore(); return; }
+  if(state==='over'){  drawGameOver(); ctx.restore(); return; }
+  if(state==='pause'){ drawGame(); drawPause(); ctx.restore(); return; }
+
+  drawGame();
+  ctx.restore();
+}
+
+function drawGame(){
+  // Items
+  G.items.forEach(drawItem);
+  // Enemies
+  G.enemies.forEach(drawEnemy);
+  // Player
+  drawPlayer();
+  // Shield ring
+  if((G.shieldTimer||0)>0){
+    ctx.beginPath();
+    ctx.arc(Math.round(G.px),Math.round(G.py),12,0,Math.PI*2);
+    ctx.strokeStyle=P.dark; ctx.lineWidth=2;
+    ctx.setLineDash([3,3]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Speed boost aura
+  if((G.speedBoost||0)>0){
+    ctx.beginPath();
+    ctx.arc(Math.round(G.px),Math.round(G.py),9,0,Math.PI*2);
+    ctx.strokeStyle=P.mid; ctx.lineWidth=1;
+    ctx.setLineDash([2,4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // Particles
+  G.particles.forEach(p=>p.draw());
+
+  // HUD
+  drawHUD();
+
+  // Wave announce
+  if(G.waveAnnounce>0){
+    const a=Math.min(1,G.waveAnnounce,3-G.waveAnnounce);
+    ctx.globalAlpha=a;
+    drawText('WAVE '+G.wave, W/2, H/2-4, 10, P.dark, 'center');
+    ctx.globalAlpha=1;
+  }
+}
+
+function drawTitle(){
+  // Title screen
+  pxRect(20,40,W-40,H-80,P.lite,P.dark);
+
+  drawText('PIXEL',W/2,80,12,P.dark,'center');
+  drawText('SURVIVOR',W/2,98,10,P.dark,'center');
+
+  // Decorative enemies
+  const mock={x:60,y:140,type:0,hp:1,maxHp:1,size:6,hitFlash:0,charging:false,chargeTimer:0,timer:0};
+  drawEnemy(mock);
+  const mock2={x:180,y:148,type:1,hp:1,maxHp:1,size:6,hitFlash:0,charging:false,chargeTimer:0,timer:0};
+  drawEnemy(mock2);
+  const mock3={x:290,y:140,type:2,hp:1,maxHp:1,size:6,hitFlash:0,charging:false,chargeTimer:0,timer:0};
+  drawEnemy(mock3);
+
+  const blink=Math.floor(Date.now()/600)%2;
+  if(blink) drawText('PRESS START',W/2,185,6,P.mid,'center');
+
+  drawText('WASD/ARROWS=MOVE',W/2,208,4,P.mid,'center');
+  drawText('SPACE/A=DASH ATTACK',W/2,218,4,P.mid,'center');
+
+  // Best score
+  const best=getBest();
+  if(best>0) drawText('BEST: '+String(best).padStart(6,'0'),W/2,232,4,P.mid,'center');
+}
+
+function drawGameOver(){
+  ctx.fillStyle='rgba(155,188,15,0.3)';
+  ctx.fillRect(0,0,W,H);
+  pxRect(40,60,W-80,H-120,P.bg,P.dark);
+
+  drawText('GAME OVER',W/2,95,9,P.dark,'center');
+  const s=String(G.score).padStart(6,'0');
+  drawText('SCORE',W/2,120,6,P.mid,'center');
+  drawText(s,W/2,136,9,P.dark,'center');
+  drawText('WAVE '+G.wave,W/2,156,6,P.mid,'center');
+
+  const m=Math.floor(G.time/60),sec=Math.floor(G.time%60);
+  drawText('TIME '+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec,W/2,170,5,P.mid,'center');
+
+  const best=getBest();
+  if(G.score>=best && G.score>0){
+    const blink=Math.floor(Date.now()/400)%2;
+    if(blink) drawText('NEW BEST!',W/2,186,7,P.dark,'center');
+  }
+  const blink2=Math.floor(Date.now()/700)%2;
+  if(blink2) drawText('PRESS START',W/2,205,5,P.mid,'center');
+}
+
+function drawPause(){
+  ctx.fillStyle='rgba(15,56,15,0.6)';
+  ctx.fillRect(0,0,W,H);
+  drawText('PAUSED',W/2,H/2-6,10,P.bg,'center');
+  drawText('PRESS P',W/2,H/2+14,6,P.lite,'center');
+}
+
+// ── Highscore ──────────────────────────────────────
+function getBest(){ return parseInt(localStorage.getItem('ps_best')||'0'); }
+function saveBest(s){ if(s>getBest()) localStorage.setItem('ps_best',s); }
+
+let scores=[];
+function addScore(s){
+  scores.push(s);
+  scores.sort((a,b)=>b-a);
+  scores=scores.slice(0,5);
+  updateLB();
+}
+function updateLB(){
+  const best=getBest();
+  const el=document.getElementById('lb-list');
+  el.innerHTML='';
+  scores.forEach((s,i)=>{
+    const row=document.createElement('div');
+    row.className='lb-row'+(s===G?.score?' you':'');
+    row.innerHTML=`<span>${i+1}.</span><span>${String(s).padStart(6,'0')}</span>`;
+    el.appendChild(row);
+  });
+}
+
+// ── Game control ────────────────────────────────────
+function handleStart(){
+  if(state==='title'||state==='over'){
+    state='play'; newGame();
+  } else if(state==='play'){
+    state='pause';
+  } else if(state==='pause'){
+    state='play';
+  }
+}
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='p'||e.key==='P'||e.key==='Escape'){
+    if(state==='play') state='pause';
+    else if(state==='pause') state='play';
+  }
+});
+
+function endGame(){
+  state='over';
+  saveBest(G.score);
+  addScore(G.score);
+  shake(8);
+  burst(G.px,G.py,20,P.dark);
+}
+
+// ── Boot ────────────────────────────────────────────
+G = { shakeX:0, shakeY:0, screenShake:0, bgFlash:0 };
+requestAnimationFrame(update);
+updateLB();
+</script>
+</body>
+</html>
